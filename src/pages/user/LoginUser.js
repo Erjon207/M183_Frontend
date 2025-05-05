@@ -9,8 +9,29 @@ function LoginUser({loginValues, setLoginValues}) {
 
     const handleSubmit = async (e) => {
         e.preventDefault();
-        console.log(loginValues);
-        navigate('/')
+
+        try {
+            const response = await fetch('http://localhost:8080/api/users/login', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                },
+                body: JSON.stringify(loginValues),
+            });
+
+            const data = await response.json();
+
+            if (!response.ok) {
+                alert(data.error || "Login failed");
+                return;
+            }
+
+            console.log("Login success:", data);
+            navigate('/');
+        } catch (error) {
+            console.error("Login error:", error);
+            alert("An error occurred during login.");
+        }
     };
 
     return (
