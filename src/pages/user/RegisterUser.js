@@ -24,16 +24,21 @@ function RegisterUser({loginValues, setLoginValues}) {
         e.preventDefault();
         setErrorMessage('');
 
-        //validate
-        if(credentials.password !== credentials.passwordConfirmation) {
+        if (credentials.password !== credentials.passwordConfirmation) {
             console.log("password != passwordConfirmation");
             setErrorMessage('Password and password-confirmation are not equal.');
             return;
         }
 
+        const passwordRegex = /^(?=.*[a-z])(?=.*[A-Z])(?=.*\d)(?=.*[\W_]).{8,}$/;
+        if (!passwordRegex.test(credentials.password)) {
+            setErrorMessage("Password must be at least 8 characters long and include uppercase, lowercase, number, and special character.");
+            return;
+        }
+
         try {
             await postUser(credentials);
-            setLoginValues({userName: credentials.email, password: credentials.password});
+            setLoginValues({ userName: credentials.email, password: credentials.password });
             setCredentials(initialState);
             navigate('/');
         } catch (error) {
