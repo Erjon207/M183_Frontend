@@ -1,6 +1,7 @@
-import React, { useState } from 'react';
+import React, { useState, useRef } from 'react';
 import { useNavigate } from 'react-router-dom';
 import {postUser} from "../../comunication/FetchUser";
+import ReCAPTCHA from "react-google-recaptcha";
 
 /**
  * RegisterUser
@@ -19,10 +20,19 @@ function RegisterUser({loginValues, setLoginValues}) {
     };
     const [credentials, setCredentials] = useState(initialState);
     const [errorMessage, setErrorMessage] = useState('');
+    const recaptchaRef = useRef();
+    const [captchaToken, setCaptchaToken] = useState(null);
 
     const handleSubmit = async (e) => {
         e.preventDefault();
         setErrorMessage('');
+
+        const currentToken = captchaToken;
+
+        if (!currentToken) {
+            setErrorMessage("Please complete the ReCaptcha.");
+            return;
+        }
 
         //validate
         if(credentials.password !== credentials.passwordConfirmation) {
@@ -32,9 +42,14 @@ function RegisterUser({loginValues, setLoginValues}) {
         }
 
         try {
+            const payload = { ...credentials, captchaToken: currentToken };
             await postUser(credentials);
             setLoginValues({userName: credentials.email, password: credentials.password});
             setCredentials(initialState);
+            if (recaptchaRef.current) {
+                recaptchaRef.current.reset();
+            }
+            setCaptchaToken(null);
             navigate('/');
         } catch (error) {
             console.error('Failed to fetch to server:', error.message);
@@ -107,6 +122,19 @@ function RegisterUser({loginValues, setLoginValues}) {
                         </div>
                     </aside>
                 </section>
+                <ReCAPTCHA
+                              ref={recaptchaRef}
+                              sitekey={process.env.REACT_APP_RECAPTCHA_SITE_KEY}
+                              onChange={(token) => {
+                                  setCaptchaToken(token);
+                              }}
+                              onExpired={() => {
+                                  setCaptchaToken(null);
+                              }}
+                              onError={() => {
+                                  setCaptchaToken(null);
+                              }}
+                />
                 <button type="submit">Register</button>
                 {errorMessage && <p style={{ color: 'red' }}>{errorMessage}</p>}
             </form>
