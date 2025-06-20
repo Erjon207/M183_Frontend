@@ -1,59 +1,57 @@
-import React, { useState, useRef } from 'react';
+import React, { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
-import {postUser} from "../../comunication/FetchUser";
-import ReCAPTCHA from "react-google-recaptcha";
+import { postUser } from "../../comunication/FetchUser";
+import { useGoogleReCaptcha } from 'react-google-recaptcha-v3';
 
 /**
  * RegisterUser
  * @author Peter Rutschmann
  */
-function RegisterUser({loginValues, setLoginValues}) {
+function RegisterUser({ loginValues, setLoginValues }) {
     const navigate = useNavigate();
+    const { executeRecaptcha } = useGoogleReCaptcha();
 
     const initialState = {
         firstName: "",
         lastName: "",
         email: "",
         password: "",
-        passwordConfirmation: "",
-        errorMessage: ""
+        passwordConfirmation: ""
     };
+
     const [credentials, setCredentials] = useState(initialState);
     const [errorMessage, setErrorMessage] = useState('');
-    const recaptchaRef = useRef();
-    const [captchaToken, setCaptchaToken] = useState(null);
 
     const handleSubmit = async (e) => {
         e.preventDefault();
         setErrorMessage('');
 
-        const currentToken = captchaToken;
-
-        if (!currentToken) {
-            setErrorMessage("Please complete the ReCaptcha.");
+        if (!executeRecaptcha) {
+            setErrorMessage("ReCAPTCHA not yet available.");
             return;
         }
 
-        //validate
-        if(credentials.password !== credentials.passwordConfirmation) {
-            console.log("password != passwordConfirmation");
+        if (credentials.password !== credentials.passwordConfirmation) {
             setErrorMessage('Password and password-confirmation are not equal.');
             return;
         }
 
         try {
-            const payload = { ...credentials, captchaToken: currentToken };
-            await postUser(credentials);
-            setLoginValues({userName: credentials.email, password: credentials.password});
+            const token = await executeRecaptcha('register_user');
+            console.log("Captcha token:", token); // Debug check
+
+            const payload = {
+                ...credentials,
+                captchaToken: token
+            };
+
+            await postUser(payload);
+            setLoginValues({ userName: credentials.email, password: credentials.password });
             setCredentials(initialState);
-            if (recaptchaRef.current) {
-                recaptchaRef.current.reset();
-            }
-            setCaptchaToken(null);
             navigate('/');
         } catch (error) {
-            console.error('Failed to fetch to server:', error.message);
-            setErrorMessage(error.message);
+            console.error('Failed to register user:', error.message);
+            setErrorMessage(error.message || 'Registration failed.');
         }
     };
 
@@ -62,79 +60,56 @@ function RegisterUser({loginValues, setLoginValues}) {
             <h2>Register user</h2>
             <form onSubmit={handleSubmit}>
                 <section>
-                <aside>
-                    <div>
-                        <label>Firstname:</label>
-                        <input
-                            type="text"
-                            value={credentials.firstName}
-                            onChange={(e) =>
-                                setCredentials(prevValues => ({...prevValues, firstName: e.target.value}))}
-                            required
-                            placeholder="Please enter your firstname *"
-                        />
-                    </div>
-                    <div>
-                        <label>Lastname:</label>
-                        <input
-                            type="text"
-                            value={credentials.lastName}
-                            onChange={(e) =>
-                                setCredentials(prevValues => ({...prevValues, lastName: e.target.value}))}
-                            required
-                            placeholder="Please enter your lastname *"
-                        />
-                    </div>
-                    <div>
-                        <label>Email:</label>
-                        <input
-                            type="text"
-                            value={credentials.email}
-                            onChange={(e) =>
-                                setCredentials(prevValues => ({...prevValues, email: e.target.value}))}
-                            required
-                            placeholder="Please enter your email"
-                        />
-                    </div>
-                </aside>
+                    <aside>
+                        <div>
+                            <label>Firstname:</label>
+                            <input
+                                type="text"
+                                value={credentials.firstName}
+                                onChange={(e) => setCredentials(prev => ({ ...prev, firstName: e.target.value }))}
+                                required
+                            />
+                        </div>
+                        <div>
+                            <label>Lastname:</label>
+                            <input
+                                type="text"
+                                value={credentials.lastName}
+                                onChange={(e) => setCredentials(prev => ({ ...prev, lastName: e.target.value }))}
+                                required
+                            />
+                        </div>
+                        <div>
+                            <label>Email:</label>
+                            <input
+                                type="email"
+                                value={credentials.email}
+                                onChange={(e) => setCredentials(prev => ({ ...prev, email: e.target.value }))}
+                                required
+                            />
+                        </div>
+                    </aside>
                     <aside>
                         <div>
                             <label>Password:</label>
                             <input
-                                type="text"
+                                type="password"
                                 value={credentials.password}
-                                onChange={(e) =>
-                                    setCredentials(prevValues => ({...prevValues, password: e.target.value}))}
+                                onChange={(e) => setCredentials(prev => ({ ...prev, password: e.target.value }))}
                                 required
-                                placeholder="Please enter your pwd *"
                             />
                         </div>
                         <div>
                             <label>Password confirmation:</label>
                             <input
-                                type="text"
+                                type="password"
                                 value={credentials.passwordConfirmation}
-                                onChange={(e) =>
-                                    setCredentials(prevValues => ({...prevValues, passwordConfirmation: e.target.value}))}
+                                onChange={(e) => setCredentials(prev => ({ ...prev, passwordConfirmation: e.target.value }))}
                                 required
-                                placeholder="Please confirm your pwd *"
                             />
                         </div>
                     </aside>
                 </section>
-                <ReCAPTCHA
-                              ref={recaptchaRef}
-                              sitekey={process.env.REACT_APP_RECAPTCHA_SITE_KEY}
-                              onChange={(token) => {
-                                  setCaptchaToken(token);
-                              }}
-                              onExpired={() => {
-                                  setCaptchaToken(null);
-                              }}
-                              onError={() => {
-                                  setCaptchaToken(null);
-                              }}
-                />
                 <button type="submit">Register</button>
                 {errorMessage && <p style={{ color: 'red' }}>{errorMessage}</p>}
             </form>
