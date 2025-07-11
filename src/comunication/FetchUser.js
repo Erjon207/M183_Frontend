@@ -3,7 +3,6 @@
  * @author Peter Rutschmann
  */
 
-
 export const getUsers = async () => {
     const protocol = process.env.REACT_APP_API_PROTOCOL; // "http"
     const host = process.env.REACT_APP_API_HOST; // "localhost"
@@ -14,7 +13,7 @@ export const getUsers = async () => {
 
     try {
         const response = await fetch(`${API_URL}/users`, {
-            method: 'Get',
+            method: 'GET',
             headers: {
                 'Accept': 'application/json'
             }
@@ -46,14 +45,16 @@ export const postUser = async (content) => {
         const response = await fetch(`${API_URL}/users`, {
             method: 'POST',
             headers: {
-                'Content-Type': 'application/json'
+                'Content-Type': 'application/json',
+                'Accept': 'application/json'
             },
             body: JSON.stringify({
-                firstName: `${content.firstName}`,
-                lastName: `${content.lastName}`,
-                email: `${content.email}`,
-                password: `${content.password}`,
-                passwordConfirmation: `${content.passwordConfirmation}`
+                firstName: content.firstName,
+                lastName: content.lastName,
+                email: content.email,
+                password: content.password,
+                admin: content.admin,  // role als string "true" oder "false"
+                passwordConfirmation: content.passwordConfirmation
             })
         });
 
